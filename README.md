@@ -21,6 +21,8 @@ Elementos da identidade visual em SVG, prontos para arrastar no Figma (viram cam
 
 **Logo:** `svg/logo/` — logo Sizebay (preto, branco, azul), símbolo isolado e prancha de aplicações. Recriado em vetor a partir do board; confira com o arquivo oficial da marca antes de imprimir.
 
+**Lockup oficial em papel:** `svg/logo/kickoff2026-lockup-papel.svg` — vetorização fiel da arte de referência (`assets/lockup-referencia.webp`), com bordas rasgadas e fibras de papel. Regerar com `python3 scripts/vetorizar_lockup.py` (requer `vtracer`).
+
 **Apresentação de key visual:** `Kickoff2026-KeyVisual.pdf` e slides 1920×1080 em `svg/apresentacao/` (capa, conceito, logo, cores, tipografia, elementos, construção, palco, espaço, peças, encerramento).
 
 **A substituir:** áreas cinza "FOTO 1…6" pelas fotos dos modelos.
