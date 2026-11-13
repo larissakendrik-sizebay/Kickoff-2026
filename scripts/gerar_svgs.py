@@ -29,8 +29,64 @@ SANS = "'DM Sans', Helvetica, Arial, sans-serif"
 rng = random.Random(2026)
 
 
-def svg(w, h, body, bg=None):
+def _grain_png(seed, light, dark, size=720):
+    """Textura de risografia sem emenda: pontos claros (papel aparecendo) com densidade
+    irregular e pontos escuros (tinta acumulada). light/dark = (fração, alpha)."""
+    import base64, io
+    import numpy as np
+    from PIL import Image
+    r = np.random.default_rng(seed)
+
+    def wrap_blur(a, k):
+        out = a.copy()
+        for dx in range(-k, k + 1):
+            for dy in range(-k, k + 1):
+                if dx or dy:
+                    out += np.roll(np.roll(a, dx, 0), dy, 1)
+        return out / (2 * k + 1) ** 2
+
+    fine = wrap_blur(r.random((size, size)), 1)
+    low = r.random((size // 24, size // 24))
+    low = np.kron(low, np.ones((24, 24)))
+    low = wrap_blur(wrap_blur(low, 6), 6)
+    low = (low - low.min()) / (low.max() - low.min() + 1e-9)
+    out = np.zeros((size, size, 4), np.uint8)
+    if light[0]:
+        th = np.quantile(fine, 1 - light[0])
+        m = fine + (low - 0.5) * 0.05 >= th
+        out[m] = (255, 251, 244, light[1])
+    if dark[0]:
+        th = np.quantile(fine, dark[0])
+        m = fine - (low - 0.5) * 0.04 <= th
+        out[m] = (25, 12, 30, dark[1])
+    buf = io.BytesIO()
+    Image.fromarray(out).save(buf, "PNG", optimize=True)
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+_GRAINS = {}
+GRAIN_SPECS = {"grain": (11, (0.13, 120), (0.025, 45)),      # formas de cor
+               "grain-soft": (13, (0.06, 90), (0.0, 0)),     # cores do lockup
+               "grain-bg": (12, (0.0, 0), (0.015, 18))}      # papel de fundo
+
+
+def _grain_defs(body):
+    out = []
+    for gid, (seed, light, dark) in GRAIN_SPECS.items():
+        if f"url(#{gid})" not in body:
+            continue
+        if gid not in _GRAINS:
+            _GRAINS[gid] = _grain_png(seed, light, dark)
+        out.append(f'<pattern id="{gid}" patternUnits="userSpaceOnUse" width="360" height="360">'
+                   f'<image width="360" height="360" href="data:image/png;base64,{_GRAINS[gid]}"/></pattern>')
+    return f"<defs>{''.join(out)}</defs>" if out else ""
+
+
+def svg(w, h, body, bg=None, texture=True):
     bgrect = f'<rect width="{w}" height="{h}" fill="{bg}"/>' if bg else ""
+    if bg and texture:
+        bgrect += f'<rect width="{w}" height="{h}" fill="url(#grain-bg)"/>'
+    bgrect = _grain_defs(bgrect + body) + bgrect
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" '
         f'viewBox="0 0 {w} {h}">{bgrect}{body}</svg>\n'
@@ -101,7 +157,28 @@ def _fiber_width(w, h):
     return max(3.0, min(11.0, min(w, h) * 0.055))
 
 
-def torn_rect(x, y, w, h, fill, rot=0, jag=3, step=16, name=None, opacity=None, fiber=True):
+BLEND = "multiply"
+
+
+def _riso(poly_pts, fill, tr="", idattr="", opacity=None):
+    pts = fmt(poly_pts)
+    op = f";opacity:{opacity}" if opacity else ""
+    blend = f' style="mix-blend-mode:{BLEND}{op}"' if BLEND else (f' opacity="{opacity}"' if opacity else "")
+    return (f'<g{idattr}{tr}{blend}><polygon points="{pts}" fill="{fill}"/>'
+            f'<polygon points="{pts}" fill="url(#grain)"/></g>')
+
+
+def torn_rect(x, y, w, h, fill, rot=0, jag=3, step=16, name=None, opacity=None, fiber=True, paper=False):
+    """Forma de cor. Padrão: corte limpo + grão de risografia + multiply.
+    paper=True: tira de papel rasgado com fibra branca (para textos e fotos)."""
+    if not paper:
+        tr = f' transform="rotate({rot} {x + w / 2:.1f} {y + h / 2:.1f})"' if rot else ""
+        idattr = f' id="{name}"' if name else ""
+        return _riso([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], fill, tr, idattr, opacity)
+    return _paper_rect(x, y, w, h, fill, rot, name, opacity, fiber)
+
+
+def _paper_rect(x, y, w, h, fill, rot=0, name=None, opacity=None, fiber=True):
     """Pedaço de papel rasgado no padrão do lockup: quadrilátero levemente torto,
     topo/base rasgados com ondulação irregular, fibra branca de largura variável
     em uma ou nas duas bordas rasgadas, laterais em corte reto."""
@@ -137,7 +214,19 @@ def torn_rect(x, y, w, h, fill, rot=0, jag=3, step=16, name=None, opacity=None, 
     return f'<g{idattr}{tr}{op}>{"".join(parts)}</g>'
 
 
-def torn_arc(cx, cy, r, fill, a0=0, a1=360, jag=2.5, rot=0, name=None, fiber=True):
+def torn_arc(cx, cy, r, fill, a0=0, a1=360, jag=2.5, rot=0, name=None, fiber=True, paper=False):
+    """Círculo/semicírculo. Padrão: corte limpo + grão + multiply."""
+    if not paper:
+        n = max(48, int(abs(a1 - a0) / 2))
+        pts = [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * i / n)),
+                cy + r * math.sin(math.radians(a0 + (a1 - a0) * i / n))) for i in range(n + 1)]
+        tr = f' transform="rotate({rot} {cx} {cy})"' if rot else ""
+        idattr = f' id="{name}"' if name else ""
+        return _riso(pts, fill, tr, idattr)
+    return _paper_arc(cx, cy, r, fill, a0, a1, rot, name, fiber)
+
+
+def _paper_arc(cx, cy, r, fill, a0=0, a1=360, rot=0, name=None, fiber=True):
     """Círculo (ou semicírculo) de papel rasgado no padrão do lockup."""
     full = abs(a1 - a0) >= 360
     L = math.radians(abs(a1 - a0)) * r
@@ -183,20 +272,22 @@ def arcs(cx, cy, r0, n, gap, color=BLUE, width=6, a0=180, a1=270, name="arcos"):
         large = 1 if (a1 - a0) % 360 > 180 else 0
         out.append(
             f'<path d="M{x1:.1f},{y1:.1f} A{r},{r} 0 {large} 1 {x2:.1f},{y2:.1f}" '
-            f'fill="none" stroke="{color}" stroke-width="{width}" stroke-linecap="round"/>'
+            f'fill="none" stroke="{color}" stroke-width="{width * 1.25:.1f}" stroke-linecap="butt"/>'
         )
     return f'<g id="{name}">{"".join(out)}</g>'
 
 
 def starburst(cx, cy, r_in, r_out, n=16, color=BLACK, width=3, name="explosao"):
     out = []
+    r_in = 0
+    width = max(1.5, width * 0.8)
     for i in range(n):
-        a = 2 * math.pi * i / n + rng.uniform(-0.04, 0.04)
-        ro = r_out * rng.uniform(0.85, 1.0)
+        a = 2 * math.pi * i / n + rng.uniform(-0.02, 0.02)
+        ro = r_out * rng.uniform(0.96, 1.0)
         out.append(
             f'<line x1="{cx + r_in * math.cos(a):.1f}" y1="{cy + r_in * math.sin(a):.1f}" '
             f'x2="{cx + ro * math.cos(a):.1f}" y2="{cy + ro * math.sin(a):.1f}" '
-            f'stroke="{color}" stroke-width="{width}" stroke-linecap="round"/>'
+            f'stroke="{color}" stroke-width="{width}" stroke-linecap="butt"/>'
         )
     return f'<g id="{name}">{"".join(out)}</g>'
 
@@ -267,7 +358,14 @@ def title_lockup(width=800):
     global _LOCKUP
     if _LOCKUP is None:
         src = (OUT / "logo" / "kickoff2026-lockup-papel.svg").read_text()
-        _LOCKUP = src.split(">", 1)[1].rsplit("</svg>", 1)[0]
+        inner = src.split(">", 1)[1].rsplit("</svg>", 1)[0]
+        import re as _re
+        def _gr(m):
+            p = m.group(0)
+            if 'papel-borda' in p or 'creme-texto' in p or 'preto' in p:
+                return p
+            return p + _re.sub(r'fill="#[0-9A-Fa-f]{6}"', 'fill="url(#grain-soft)"', p).replace('data-camada="', 'data-camada="grao-', 1)
+        _LOCKUP = _re.sub(r"<path [^>]*/>", _gr, inner)
     bx, by, bw, bh = LOCKUP_BOX
     k = width / bw
     return (f'<g id="lockup-kickoff-2026" transform="scale({k:.5f}) translate({-bx} {-by})">'
@@ -277,15 +375,15 @@ def title_lockup(width=800):
 def tagline(size=40):
     """'Alone we fit well. / Together, we fit perfectly.' em tira de papel."""
     w = size * 14.5
-    b = torn_rect(0, 0, w, size * 3.2, PAPER, jag=4, rot=-1)
+    b = torn_rect(0, 0, w, size * 3.2, PAPER, jag=4, rot=-1, paper=True)
     b += text(size * 0.8, size * 1.35, "Alone we fit well.", size, SANS, BLACK)
-    b += torn_rect(size * 0.6, size * 1.85, size * 12.6, size * 1.1, YELLOW, jag=2)
+    b += torn_rect(size * 0.6, size * 1.85, size * 12.6, size * 1.1, YELLOW, jag=2, paper=True, fiber=False)
     b += text(size * 0.8, size * 2.65, "Together, we fit perfectly.", size, SANS, BLACK, weight=700)
     return b
 
 
 def photo(x, y, w, h, label, rot=0):
-    return g(torn_rect(0, 0, w, h, PHOTO, jag=5)
+    return g(torn_rect(0, 0, w, h, PHOTO, jag=5, paper=True)
              + text(w / 2, h / 2, label, 28, SANS, "#8A8275", weight=700, anchor="middle"),
              x, y, rot=rot, name=label.lower().replace(" ", "-"))
 
@@ -316,7 +414,7 @@ def paleta():
 def elementos():
     W, H = 1600, 1000
     b = [text(80, 90, "ELEMENTOS DA IDENTIDADE", 36, DISPLAY, BLACK)]
-    b.append(torn_rect(80, 140, 300, 170, "#E9E4DA", jag=6, rot=-3, name="papel-rasgado"))
+    b.append(torn_rect(80, 140, 300, 170, "#E9E4DA", jag=6, rot=-3, name="papel-rasgado", paper=True))
     b.append(starburst(560, 225, 14, 95, 18, BLACK, 3))
     b.append(arcs(860, 330, 60, 6, 18, BLUE, 6, 180, 300))
     b.append(dots(1180, 140, 300, 170, 15, 3))
