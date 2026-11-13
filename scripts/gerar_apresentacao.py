@@ -165,7 +165,7 @@ def s06_elementos():
             el = torn_arc(120, 90, 85, c)
         b += g(el, x, 660)
     b += text(80, 900, "Recortes de papel colorido", 26, SANS, BLACK, weight=700)
-    b += para(80, 940, ["Sobreponha, gire entre −8° e +8° e deixe as bordas irregulares aparentes.",
+    b += para(80, 940, ["Topo e base rasgados com fibra branca; laterais em corte reto. Gire entre −8° e +8°.",
                         "Combine no máximo 3 cores por área para manter a leitura."], 22)
     save(6, "elementos", b)
 
@@ -181,9 +181,10 @@ def s07_construcao():
     b += para(1240, 375, ["• Fundo creme com recortes saindo das bordas",
                           "• Pessoas em recorte, olhando para cima",
                           "• Lockup sobreposto às fotos, nunca isolado",
-                          "• Lema em tira de papel com marca-texto amarelo"], 24, BLACK)
-    b += text(1240, 610, "EVITE", 24, SANS, RED, weight=700, ls=3)
-    b += para(1240, 655, ["• Gradientes, sombras e efeitos 3D",
+                          "• Lema em tira de papel com marca-texto amarelo",
+                          "• Bordas rasgadas com a fibra branca do papel"], 24, BLACK)
+    b += text(1240, 650, "EVITE", 24, SANS, RED, weight=700, ls=3)
+    b += para(1240, 695, ["• Gradientes, sombras e efeitos 3D",
                           "• Bordas retas e perfeitas nos recortes",
                           "• Texto longo sobre amarelo ou rosa em fonte fina",
                           "• Mais de 3 cores fortes no mesmo bloco"], 24, BLACK)

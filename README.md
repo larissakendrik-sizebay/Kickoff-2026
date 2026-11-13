@@ -5,7 +5,7 @@ Elementos da identidade visual em SVG, prontos para arrastar no Figma (viram cam
 | Arquivo | Conteúdo |
 |---|---|
 | `svg/01-paleta-tipografia.svg` | Paleta (hex) e tipografia |
-| `svg/02-elementos-graficos.svg` | Papel rasgado, recortes coloridos, explosão, arcos, textura de pontos, círculos |
+| `svg/02-elementos-graficos.svg` | Papel rasgado com fibra branca na borda, recortes coloridos, explosão, arcos, textura de pontos, círculos |
 | `svg/03-lettering-titulo.svg` | Lockup KICKOFF 2026 / TOGETHER / we FIT |
 | `svg/03b-lema.svg` | "Alone we fit well. Together, we fit perfectly." |
 | `svg/04-key-visual-16x9.svg` | Key visual 1920×1080 |

@@ -58,31 +58,83 @@ def _edge(x1, y1, x2, y2, jag, step):
     return pts
 
 
-def torn_rect(x, y, w, h, fill, rot=0, jag=3, step=16, name=None, opacity=None):
-    """Retângulo com bordas de papel rasgado."""
-    pts = (
-        _edge(x, y, x + w, y, jag, step)
-        + _edge(x + w, y, x + w, y + h, jag * 0.6, step)
-        + _edge(x + w, y + h, x, y + h, jag, step)
-        + _edge(x, y + h, x, y, jag * 0.6, step)
-    )
+FIBER = "#F6F3F4"  # miolo branco do papel rasgado (da arte do lockup)
+
+
+def _wave():
+    """Ruído suave 0..1 (largura variável da fibra branca)."""
+    ph = [rng.uniform(0, 6.28) for _ in range(3)]
+    fr = [rng.uniform(1.0, 2.0), rng.uniform(3.0, 5.0), rng.uniform(7.0, 11.0)]
+    return lambda t: max(0.0, 0.55 + 0.35 * math.sin(fr[0] * 6.28 * t + ph[0])
+                         + 0.2 * math.sin(fr[1] * 6.28 * t + ph[1])
+                         + 0.1 * math.sin(fr[2] * 6.28 * t + ph[2]))
+
+
+def _torn_line(x1, x2, y, sign, jag, step, fiber=0.0):
+    """Borda rasgada horizontal de x1 a x2; fiber>0 empurra para fora (sign)."""
+    n = max(2, int(abs(x2 - x1) / step))
+    wv = _wave()
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        d = rng.uniform(-jag, jag) + sign * fiber * wv(t)
+        pts.append((x1 + (x2 - x1) * t, y + d))
+    return pts
+
+
+def _fiber_width(w, h):
+    return max(3.0, min(12.0, min(w, h) * 0.05))
+
+
+def torn_rect(x, y, w, h, fill, rot=0, jag=3, step=16, name=None, opacity=None, fiber=True):
+    """Pedaço de papel rasgado: topo e base rasgados com fibra branca, laterais cortadas."""
+    jag = min(jag, 2.5)
+    st = min(step, 9)
+    e = _fiber_width(w, h)
+    sj = jag * 0.25  # laterais quase retas (corte de tesoura)
+
+    def shape(ext):
+        top = _torn_line(x, x + w, y, -1, jag, st, ext)
+        bot = _torn_line(x + w, x, y + h, +1, jag, st, ext)
+        right = [(x + w + rng.uniform(-sj, sj), y + h * t) for t in (0.33, 0.66)]
+        left = [(x + rng.uniform(-sj, sj), y + h * t) for t in (0.66, 0.33)]
+        return top + right + bot + left
+
+    parts = []
+    if fiber:
+        parts.append(f'<polygon points="{fmt(shape(e))}" fill="{FIBER}"/>')
+    parts.append(f'<polygon points="{fmt(shape(0))}" fill="{fill}"/>')
     tr = f' transform="rotate({rot} {x + w / 2:.1f} {y + h / 2:.1f})"' if rot else ""
     op = f' opacity="{opacity}"' if opacity else ""
     idattr = f' id="{name}"' if name else ""
-    return f'<polygon{idattr} points="{fmt(pts)}" fill="{fill}"{tr}{op}/>'
+    return f'<g{idattr}{tr}{op}>{"".join(parts)}</g>'
 
 
-def torn_arc(cx, cy, r, fill, a0=0, a1=360, jag=2.5, rot=0, name=None):
-    """Círculo (ou semicírculo) recortado à mão."""
-    n = max(24, int(abs(a1 - a0) / 3))
-    pts = []
-    for i in range(n + 1):
-        a = math.radians(a0 + (a1 - a0) * i / n)
-        rr = r + rng.uniform(-jag, jag)
-        pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+def torn_arc(cx, cy, r, fill, a0=0, a1=360, jag=2.5, rot=0, name=None, fiber=True):
+    """Círculo (ou semicírculo) de papel rasgado, com fibra branca na borda."""
+    n = max(36, int(abs(a1 - a0) / 2))
+    full = abs(a1 - a0) >= 360
+    e = _fiber_width(r, r)
+    jag = min(jag, 2.5)
+
+    def shape(ext):
+        wv = _wave()
+        pts = []
+        for i in range(n + 1):
+            t = i / n
+            a = math.radians(a0 + (a1 - a0) * t)
+            k = 1.0 if full else math.sin(math.pi * t) ** 0.3  # some no corte reto
+            rr = r + rng.uniform(-jag, jag) + ext * wv(t) * k
+            pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+        return pts
+
+    parts = []
+    if fiber:
+        parts.append(f'<polygon points="{fmt(shape(e))}" fill="{FIBER}"/>')
+    parts.append(f'<polygon points="{fmt(shape(0))}" fill="{fill}"/>')
     tr = f' transform="rotate({rot} {cx} {cy})"' if rot else ""
     idattr = f' id="{name}"' if name else ""
-    return f'<polygon{idattr} points="{fmt(pts)}" fill="{fill}"{tr}/>'
+    return f'<g{idattr}{tr}>{"".join(parts)}</g>'
 
 
 def arcs(cx, cy, r0, n, gap, color=BLUE, width=6, a0=180, a1=270, name="arcos"):
