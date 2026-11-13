@@ -12,14 +12,14 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parent.parent / "svg"
 
 # ---------- Paleta ----------
-BLUE = "#2340E0"
+BLUE = "#0017C8"
 BLUE_LIGHT = "#7B95F2"
-RED = "#F2452B"
-YELLOW = "#E4EC2C"
+RED = "#FB2D0B"
+YELLOW = "#E3ED06"
 PINK = "#EE6FCB"
-BLACK = "#111111"
-CREAM = "#F4EFE4"
-PAPER = "#FBF8F1"
+BLACK = "#050505"
+CREAM = "#FDEDD8"
+PAPER = "#FBF6EE"
 PHOTO = "#D8D1C4"
 
 DISPLAY = "'Archivo Black', 'Arial Black', sans-serif"
@@ -61,49 +61,76 @@ def _edge(x1, y1, x2, y2, jag, step):
 FIBER = "#F6F3F4"  # miolo branco do papel rasgado (da arte do lockup)
 
 
-def _wave():
-    """Ruído suave 0..1 (largura variável da fibra branca)."""
-    ph = [rng.uniform(0, 6.28) for _ in range(3)]
-    fr = [rng.uniform(1.0, 2.0), rng.uniform(3.0, 5.0), rng.uniform(7.0, 11.0)]
-    return lambda t: max(0.0, 0.55 + 0.35 * math.sin(fr[0] * 6.28 * t + ph[0])
-                         + 0.2 * math.sin(fr[1] * 6.28 * t + ph[1])
-                         + 0.1 * math.sin(fr[2] * 6.28 * t + ph[2]))
+def _noise(L, s):
+    """Ruído de borda em unidades absolutas: ondulação + pequenas fibras (como no lockup)."""
+    comps = [(rng.uniform(90, 170), 2.4), (rng.uniform(28, 48), 0.9), (rng.uniform(9, 14), 0.35)]
+    ph = [rng.uniform(0, 6.28) for _ in comps]
+    def f(u):
+        v = sum(a * math.sin(6.28 * u / wl + p) for (wl, a), p in zip(comps, ph))
+        return s * (v + rng.uniform(-0.4, 0.4))
+    return f
 
 
-def _torn_line(x1, x2, y, sign, jag, step, fiber=0.0):
-    """Borda rasgada horizontal de x1 a x2; fiber>0 empurra para fora (sign)."""
-    n = max(2, int(abs(x2 - x1) / step))
-    wv = _wave()
+def _fiber_profile(L, e):
+    """Largura da fibra branca: varia devagar, às vezes some."""
+    wl, ph = rng.uniform(120, 260), rng.uniform(0, 6.28)
+    wl2, ph2 = rng.uniform(40, 70), rng.uniform(0, 6.28)
+    return lambda u: e * max(0.0, 0.45 + 0.5 * math.sin(6.28 * u / wl + ph)
+                             + 0.25 * math.sin(6.28 * u / wl2 + ph2))
+
+
+def _torn_edge(p0, p1, s, out_n, fiber_e=0.0, step=4):
+    """Pontos de p0 a p1 com borda rasgada; fiber_e>0 empurra para fora (normal out_n)."""
+    L = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+    n = max(3, int(L / step))
+    nz = _noise(L, s)
+    fp0 = _fiber_profile(L, fiber_e or 1.0)
+    fp = fp0 if fiber_e else (lambda u: 0)
     pts = []
     for i in range(n + 1):
         t = i / n
-        d = rng.uniform(-jag, jag) + sign * fiber * wv(t)
-        pts.append((x1 + (x2 - x1) * t, y + d))
+        u = t * L
+        taper = min(1.0, t * L / 6, (1 - t) * L / 6)
+        d = nz(u) * taper + fp(u) * taper
+        pts.append((p0[0] + (p1[0] - p0[0]) * t + out_n[0] * d,
+                    p0[1] + (p1[1] - p0[1]) * t + out_n[1] * d))
     return pts
 
 
 def _fiber_width(w, h):
-    return max(3.0, min(12.0, min(w, h) * 0.05))
+    return max(3.0, min(11.0, min(w, h) * 0.055))
 
 
 def torn_rect(x, y, w, h, fill, rot=0, jag=3, step=16, name=None, opacity=None, fiber=True):
-    """Pedaço de papel rasgado: topo e base rasgados com fibra branca, laterais cortadas."""
-    jag = min(jag, 2.5)
-    st = min(step, 9)
+    """Pedaço de papel rasgado no padrão do lockup: quadrilátero levemente torto,
+    topo/base rasgados com ondulação irregular, fibra branca de largura variável
+    em uma ou nas duas bordas rasgadas, laterais em corte reto."""
+    s = max(0.45, min(1.3, min(w, h) / 150))
     e = _fiber_width(w, h)
-    sj = jag * 0.25  # laterais quase retas (corte de tesoura)
+    k = min(w, h) * 0.035
+    c = [(x + rng.uniform(-k, k), y + rng.uniform(-k, k)),
+         (x + w + rng.uniform(-k, k), y + rng.uniform(-k, k)),
+         (x + w + rng.uniform(-k, k), y + h + rng.uniform(-k, k)),
+         (x + rng.uniform(-k, k), y + h + rng.uniform(-k, k))]
+    ft, fb = rng.random() < 0.75, rng.random() < 0.6
+    if not (ft or fb):
+        ft = True
+    seed = rng.random()
 
     def shape(ext):
-        top = _torn_line(x, x + w, y, -1, jag, st, ext)
-        bot = _torn_line(x + w, x, y + h, +1, jag, st, ext)
-        right = [(x + w + rng.uniform(-sj, sj), y + h * t) for t in (0.33, 0.66)]
-        left = [(x + rng.uniform(-sj, sj), y + h * t) for t in (0.66, 0.33)]
-        return top + right + bot + left
+        r = random.Random(seed)  # mesma forma-base para cor e fibra
+        st = rng.getstate()
+        rng.seed(r.random())
+        top = _torn_edge(c[0], c[1], s, (0, -1), e if (ext and ft) else 0)
+        rng.seed(r.random())
+        bot = _torn_edge(c[2], c[3], s, (0, 1), e if (ext and fb) else 0)
+        rng.setstate(st)
+        return top + bot
 
     parts = []
     if fiber:
-        parts.append(f'<polygon points="{fmt(shape(e))}" fill="{FIBER}"/>')
-    parts.append(f'<polygon points="{fmt(shape(0))}" fill="{fill}"/>')
+        parts.append(f'<polygon points="{fmt(shape(True))}" fill="{FIBER}"/>')
+    parts.append(f'<polygon points="{fmt(shape(False))}" fill="{fill}"/>')
     tr = f' transform="rotate({rot} {x + w / 2:.1f} {y + h / 2:.1f})"' if rot else ""
     op = f' opacity="{opacity}"' if opacity else ""
     idattr = f' id="{name}"' if name else ""
@@ -111,30 +138,37 @@ def torn_rect(x, y, w, h, fill, rot=0, jag=3, step=16, name=None, opacity=None, 
 
 
 def torn_arc(cx, cy, r, fill, a0=0, a1=360, jag=2.5, rot=0, name=None, fiber=True):
-    """Círculo (ou semicírculo) de papel rasgado, com fibra branca na borda."""
-    n = max(36, int(abs(a1 - a0) / 2))
+    """Círculo (ou semicírculo) de papel rasgado no padrão do lockup."""
     full = abs(a1 - a0) >= 360
+    L = math.radians(abs(a1 - a0)) * r
+    n = max(40, int(L / 4))
     e = _fiber_width(r, r)
-    jag = min(jag, 2.5)
+    s = max(0.45, min(1.3, r / 120))
+    seed = rng.random()
 
     def shape(ext):
-        wv = _wave()
+        st = rng.getstate()
+        rng.seed(seed)
+        nz = _noise(L, s)
+        fp = _fiber_profile(L, e)
         pts = []
         for i in range(n + 1):
             t = i / n
+            u = t * L
             a = math.radians(a0 + (a1 - a0) * t)
-            k = 1.0 if full else math.sin(math.pi * t) ** 0.3  # some no corte reto
-            rr = r + rng.uniform(-jag, jag) + ext * wv(t) * k
+            k = 1.0 if full else min(1.0, t * L / 10, (1 - t) * L / 10)
+            rr = r + nz(u) * k + (fp(u) * k if ext else 0)
             pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+        rng.setstate(st)
         return pts
 
     parts = []
     if fiber:
-        parts.append(f'<polygon points="{fmt(shape(e))}" fill="{FIBER}"/>')
-    parts.append(f'<polygon points="{fmt(shape(0))}" fill="{fill}"/>')
+        parts.append(f'<polygon points="{fmt(shape(True))}" fill="{FIBER}"/>')
+    parts.append(f'<polygon points="{fmt(shape(False))}" fill="{fill}"/>')
     tr = f' transform="rotate({rot} {cx} {cy})"' if rot else ""
     idattr = f' id="{name}"' if name else ""
-    return f'<g{idattr}{tr}>{"".join(parts)}</g>'
+    return f'<g{idattr}>{"".join(parts)}</g>' if not rot else f'<g{idattr}{tr}>{"".join(parts)}</g>'
 
 
 def arcs(cx, cy, r0, n, gap, color=BLUE, width=6, a0=180, a1=270, name="arcos"):
@@ -224,18 +258,20 @@ def logo(x, y, size=40, color=BLACK, inner=None):
 
 
 # ---------- Lettering do título ----------
-def title_lockup():
-    """Bloco 'KICKOFF 2026 / TOGETHER / we FIT' (~800 x 430)."""
-    b = []
-    b.append(g(torn_rect(0, 0, 360, 68, YELLOW, jag=3)
-               + text(22, 49, "KICKOFF 2026", 38, DISPLAY, BLACK), 40, 0, rot=-2, name="tag-kickoff"))
-    b.append(g(torn_rect(0, 0, 790, 160, BLUE, jag=4)
-               + text(34, 124, "TOGETHER", 112, DISPLAY, CREAM), 0, 72, rot=-2, name="bloco-together"))
-    b.append(g(torn_rect(0, 0, 290, 180, RED, jag=4)
-               + text(40, 140, "we", 170, SERIF, CREAM, italic=True), 30, 240, rot=2, name="bloco-we"))
-    b.append(g(torn_rect(0, 0, 400, 160, YELLOW, jag=4)
-               + text(56, 128, "FIT", 128, DISPLAY, BLACK), 340, 250, rot=-1, name="bloco-fit"))
-    return "".join(b)
+_LOCKUP = None
+LOCKUP_BOX = (302, 144, 2910, 1568)  # área útil no viewBox do SVG vetorizado
+
+
+def title_lockup(width=800):
+    """Lockup oficial vetorizado (svg/logo/kickoff2026-lockup-papel.svg), ~800 x 431."""
+    global _LOCKUP
+    if _LOCKUP is None:
+        src = (OUT / "logo" / "kickoff2026-lockup-papel.svg").read_text()
+        _LOCKUP = src.split(">", 1)[1].rsplit("</svg>", 1)[0]
+    bx, by, bw, bh = LOCKUP_BOX
+    k = width / bw
+    return (f'<g id="lockup-kickoff-2026" transform="scale({k:.5f}) translate({-bx} {-by})">'
+            f'{_LOCKUP}</g>')
 
 
 def tagline(size=40):

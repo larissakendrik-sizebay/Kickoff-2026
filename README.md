@@ -17,7 +17,7 @@ Elementos da identidade visual em SVG, prontos para arrastar no Figma (viram cam
 
 **Fontes (Google Fonts, já disponíveis no Figma):** Archivo Black (display), DM Serif Display Italic ("we"), DM Sans (apoio).
 
-**Cores:** Azul `#2340E0` · Azul claro `#7B95F2` · Vermelho `#F2452B` · Amarelo `#E4EC2C` · Rosa `#EE6FCB` · Preto `#111111` · Creme `#F4EFE4`
+**Cores (da arte do lockup):** Azul `#0017C8` · Vermelho `#FB2D0B` · Amarelo `#E3ED06` · Preto `#050505` · Creme `#FDEDD8` · Fibra do papel `#F6F3F4` · Apoio: Rosa `#EE6FCB`, Azul claro `#7B95F2`
 
 **Logo:** `svg/logo/` — logo Sizebay (preto, branco, azul), símbolo isolado e prancha de aplicações. Recriado em vetor a partir do board; confira com o arquivo oficial da marca antes de imprimir.
 

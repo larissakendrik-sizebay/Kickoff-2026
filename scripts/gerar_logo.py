@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "svg" / "logo"
 FONT = ROOT / "fonts" / "DMSans-Bold.ttf"
 
-BLACK, CREAM, BLUE, YELLOW = "#111111", "#F4EFE4", "#2340E0", "#E4EC2C"
+BLACK, CREAM, BLUE, YELLOW = "#050505", "#FDEDD8", "#0017C8", "#E3ED06"
 
 # Símbolo: três formas (topo, círculo, gota) numa caixa 100 x 92.
 MARK = [

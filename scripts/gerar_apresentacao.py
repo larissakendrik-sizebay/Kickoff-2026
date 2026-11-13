@@ -89,20 +89,20 @@ def s03_logo():
     b += para(80, 830, ["Logo Sizebay: preto em fundos claros, creme sobre azul ou preto.",
                         "Área de respiro mínima = altura do círculo do símbolo."], 22)
     b += g(title_lockup(), 960, 330, 1.0, name="lockup")
-    b += para(980, 830, ["Lockup do evento: tag + 3 blocos de papel rasgado.",
-                         "Use sempre inteiro; os blocos podem girar até ±3°."], 22)
+    b += para(980, 830, ["Lockup do evento: lettering exclusivo em papel rasgado.",
+                         "Use sempre o arquivo vetorizado, inteiro e sem redesenhar."], 22)
     save(3, "logo", b)
 
 
 def s04_cores():
     b = chrome(4, "Paleta", "Cores")
-    cores = [("Azul Cobalto", BLUE, "35, 64, 224", "Cor principal", 30, CREAM),
-             ("Vermelho", RED, "242, 69, 43", "Energia", 18, CREAM),
-             ("Amarelo Limão", YELLOW, "228, 236, 44", "Destaque", 18, BLACK),
+    cores = [("Azul Cobalto", BLUE, "0, 23, 200", "Cor principal", 30, CREAM),
+             ("Vermelho", RED, "251, 45, 11", "Energia", 18, CREAM),
+             ("Amarelo Limão", YELLOW, "227, 237, 6", "Destaque", 18, BLACK),
              ("Rosa", PINK, "238, 111, 203", "Apoio", 8, BLACK),
              ("Azul Claro", BLUE_LIGHT, "123, 149, 242", "Apoio", 6, BLACK),
-             ("Preto", BLACK, "17, 17, 17", "Texto", 10, CREAM),
-             ("Creme", CREAM, "244, 239, 228", "Fundo", 0, BLACK)]
+             ("Preto", BLACK, "5, 5, 5", "Texto", 10, CREAM),
+             ("Creme", CREAM, "253, 237, 216", "Fundo", 0, BLACK)]
     x = 80
     for i, (n, c, rgb, uso, pct, fg) in enumerate(cores):
         w = 230
@@ -127,7 +127,7 @@ def s04_cores():
 def s05_tipografia():
     b = chrome(5, "Tipografia", "Fontes")
     rows = [("Archivo Black", DISPLAY, False, "Display / Títulos",
-             "TOGETHER WE FIT", "Sempre em caixa alta. Títulos, lockup e chamadas curtas."),
+             "TOGETHER WE FIT", "Caixa alta em títulos de apoio. O lockup é lettering exclusivo (arquivo vetorizado)."),
             ("DM Serif Display Italic", SERIF, True, "Destaque",
              "we", "Só para palavras de destaque, como o “we”. Nunca em textos longos."),
             ("DM Sans Regular & Bold", SANS, False, "Apoio / Textos",
@@ -173,7 +173,7 @@ def s06_elementos():
 def s07_construcao():
     b = chrome(7, "Construção", "Como montar")
     b += g(title_lockup(), 80, 330, 0.95, name="lockup")
-    labels = [(560, 340, "1  Tag KICKOFF 2026 em amarelo"), (860, 470, "2  TOGETHER no azul"),
+    labels = [(720, 365, "1  Tag KICKOFF 2026 em amarelo"), (860, 470, "2  TOGETHER no azul"),
               (330, 760, "3  “we” serifado no vermelho"), (720, 760, "4  FIT no amarelo")]
     for x, y, t in labels:
         b += f'<circle cx="{x - 20}" cy="{y - 8}" r="6" fill="{RED}"/>' + text(x, y, t, 22, SANS, BLACK, weight=700)
@@ -230,7 +230,7 @@ def s10_fim():
     b += starburst(1500, 820, 20, 140, 18, CREAM, 4)
     b += g(title_lockup(), 560, 300, 1.0, name="lockup")
     b += text(960, 860, "Alone we fit well. Together, we fit perfectly.", 40, SANS, CREAM, weight=700, anchor="middle")
-    save(11, "encerramento", b, BLUE)
+    save(11, "encerramento", b, BLACK)
 
 
 if __name__ == "__main__":
