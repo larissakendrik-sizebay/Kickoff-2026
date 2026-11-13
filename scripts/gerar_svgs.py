@@ -161,16 +161,14 @@ def clipped(w, h, body, cid, rx=0):
             f'<g clip-path="url(#{cid})">{body}</g>')
 
 
-def logo(x, y, size=40, color=BLACK, inner=CREAM):
-    """Placeholder do logo — substituir pelo logo oficial da Sizebay."""
-    s = size
-    mark = (
-        f'<rect x="0" y="{-s * 0.8}" width="{s * 0.9}" height="{s * 0.9}" rx="{s * 0.22}" fill="{color}"/>'
-        f'<rect x="{s * 0.18}" y="{-s * 0.55}" width="{s * 0.54}" height="{s * 0.12}" rx="{s * 0.06}" fill="{inner}"/>'
-        f'<rect x="{s * 0.18}" y="{-s * 0.29}" width="{s * 0.54}" height="{s * 0.12}" rx="{s * 0.06}" fill="{inner}"/>'
-    )
-    word = text(s * 1.1, 0, "Sizebay", s, SANS, color, weight=700, ls=-1)
-    return g(mark + word, x, y, name="logo-placeholder")
+def logo(x, y, size=40, color=BLACK, inner=None):
+    """Logo Sizebay: símbolo (mesmo de gerar_logo.py) + nome."""
+    from gerar_logo import MARK
+    k = size * 0.95 / 92
+    mark = (f'<g fill="{color}" transform="translate(0 {-size * 0.82:.1f}) scale({k:.4f})">'
+            + "".join(f'<path d="{d}"/>' for d in MARK) + "</g>")
+    word = text(100 * k + size * 0.22, 0, "Sizebay", size, SANS, color, weight=700, ls=-1)
+    return g(mark + word, x, y, name="logo-sizebay")
 
 
 # ---------- Lettering do título ----------

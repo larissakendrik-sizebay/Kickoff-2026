@@ -19,6 +19,10 @@ Elementos da identidade visual em SVG, prontos para arrastar no Figma (viram cam
 
 **Cores:** Azul `#2340E0` · Azul claro `#7B95F2` · Vermelho `#F2452B` · Amarelo `#E4EC2C` · Rosa `#EE6FCB` · Preto `#111111` · Creme `#F4EFE4`
 
-**A substituir:** áreas cinza "FOTO 1…6" pelas fotos dos modelos; o logo é um placeholder — trocar pelo logo oficial da Sizebay.
+**Logo:** `svg/logo/` — logo Sizebay (preto, branco, azul), símbolo isolado e prancha de aplicações. Recriado em vetor a partir do board; confira com o arquivo oficial da marca antes de imprimir.
 
-Para regenerar: `python3 scripts/gerar_svgs.py`
+**Apresentação de key visual:** `Kickoff2026-KeyVisual.pdf` e slides 1920×1080 em `svg/apresentacao/` (capa, conceito, logo, cores, tipografia, elementos, construção, palco, espaço, peças, encerramento).
+
+**A substituir:** áreas cinza "FOTO 1…6" pelas fotos dos modelos.
+
+Para regenerar: `pip install fonttools`, depois `python3 scripts/gerar_logo.py`, `python3 scripts/gerar_svgs.py` e `python3 scripts/gerar_apresentacao.py`.
